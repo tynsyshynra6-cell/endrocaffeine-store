@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endrocaffeine | الساعات الفاخرة</title>
+    
+    <!-- Meta SEO & Favicon -->
+    <meta name="description" content="متجر Endrocaffeine للساعات الفاخرة - تشكيلة كاسيو الأصلية Casio MTP-VD01D باللونين الزمردي والأزرق المائي.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⌚</text></svg>">
+    <meta name="google-site-verification" content="zRqp306OyqHWVCOQbqrIwqX4TpfReZzUxrxW2wjy87I" />
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --bg-current: #090e17;
+            --accent-emerald: #2ecc71;
+            --accent-ocean: #00d2ff;
+            --text-light: #f0f4f8;
+            --text-sub: #8b9bb0;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --bg-card: rgba(255, 255, 255, 0.04);
+            --current-color: #00d2ff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-current); color: var(--text-light); min-height: 100vh; overflow-x: hidden; transition: background-color 0.8s ease; }
+
+        nav { position: fixed; top: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 1.2rem 8%; z-index: 100; background: linear-gradient(to bottom, rgba(5, 8, 14, 0.95), rgba(5, 8, 14, 0.2)); backdrop-filter: blur(8px); }
+        .logo { font-size: 1.6rem; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; }
+        .logo .part-endro { color: var(--accent-ocean); }
+        .logo .part-caffain { color: var(--accent-emerald); }
+
+        .cart-btn-nav { background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border-color); color: #fff; padding: 0.6rem 1.2rem; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 0.6rem; font-weight: bold; font-size: 0.9rem; transition: all 0.3s ease; }
+        .cart-btn-nav:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--current-color); }
+        .cart-badge { background: var(--current-color); color: #000; font-size: 0.75rem; padding: 2px 7px; border-radius: 50%; font-weight: bold; }
+
+        #home-view { display: flex; width: 100vw; height: 100vh; overflow: hidden; }
+        .split-side { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; cursor: pointer; transition: flex 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.5s ease; padding: 2rem; text-align: center; }
+        .green-side { background: radial-gradient(circle at center, rgba(46, 204, 113, 0.12) 0%, #061009 85%); border-left: 1px solid rgba(255, 255, 255, 0.05); }
+        .blue-side { background: radial-gradient(circle at center, rgba(0, 210, 255, 0.12) 0%, #060e18 85%); }
+
+        #home-view:has(.green-side:hover) .green-side { flex: 1.6; }
+        #home-view:has(.green-side:hover) .blue-side { flex: 0.7; opacity: 0.3; }
+        #home-view:has(.blue-side:hover) .blue-side { flex: 1.6; }
+        #home-view:has(.blue-side:hover) .green-side { flex: 0.7; opacity: 0.3; }
+
+        .split-side img { width: 220px; height: auto; margin-bottom: 1.5rem; filter: drop-shadow(0 15px 30px rgba(0,0,0,0.8)); transition: transform 0.5s ease; }
+        .split-side:hover img { transform: scale(1.08) translateY(-8px); }
+        .split-side h2 { font-size: 1.8rem; margin-bottom: 0.2rem; color: #fff; }
+        .split-side .color-subtitle { font-size: 1.1rem; font-weight: bold; margin-bottom: 1rem; }
+        .green-side .color-subtitle { color: var(--accent-emerald); }
+        .blue-side .color-subtitle { color: var(--accent-ocean); }
+        .split-side p { color: var(--text-sub); margin-bottom: 1.5rem; font-size: 0.9rem; }
+
+        .btn-discover { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: white; padding: 0.8rem 2rem; border-radius: 30px; font-weight: bold; transition: all 0.3s ease; }
+        .green-side:hover .btn-discover { background: var(--accent-emerald); border-color: var(--accent-emerald); color: #000; }
+        .blue-side:hover .btn-discover { background: var(--accent-ocean); border-color: var(--accent-ocean); color: #000; }
+
+        #product-view { display: none; min-height: 100vh; padding: 110px 8% 50px; align-items: center; justify-content: space-between; gap: 4rem; opacity: 0; transition: opacity 0.5s ease; }
+        .product-details { flex: 1.2; max-width: 550px; }
+        .btn-back { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: var(--text-sub); padding: 0.5rem 1.2rem; border-radius: 20px; font-size: 0.85rem; cursor: pointer; margin-bottom: 1.2rem; transition: all 0.3s; }
+        .btn-back:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+
+        .product-brand { text-transform: uppercase; letter-spacing: 2px; font-size: 0.8rem; color: var(--text-sub); margin-bottom: 0.3rem; }
+        .product-title { font-size: 2.2rem; margin-bottom: 0.8rem; line-height: 1.2; color: #ffffff; }
+        .product-desc { color: var(--text-sub); font-size: 0.95rem; line-height: 1.7; margin-bottom: 1.8rem; }
+
+        .specs-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; margin-bottom: 1.8rem; }
+        .spec-card { background: var(--bg-card); border: 1px solid var(--border-color); padding: 0.7rem 0.9rem; border-radius: 10px; display: flex; align-items: center; gap: 0.8rem; }
+        .spec-icon { font-size: 1.2rem; }
+        .spec-info h4 { font-size: 0.85rem; color: #fff; }
+        .spec-info p { font-size: 0.75rem; color: var(--text-sub); margin: 0; }
+
+        .product-price { font-size: 2.1rem; font-weight: bold; margin-bottom: 1.4rem; color: #fff; }
+        .btn-buy-now { width: 100%; padding: 1rem; font-size: 1rem; font-weight: bold; border: none; border-radius: 30px; cursor: pointer; color: #000; transition: all 0.3s ease; }
+        .btn-buy-now:hover { transform: translateY(-3px); }
+
+        .gallery-container { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1.2rem; max-width: 420px; }
+        .main-img-card { width: 100%; height: 380px; display: flex; justify-content: center; align-items: center; position: relative; cursor: zoom-in; }
+        .glow-effect { position: absolute; width: 270px; height: 270px; background: var(--glow-color, rgba(0,210,255,0.3)); border-radius: 50%; filter: blur(55px); z-index: 1; pointer-events: none; }
+        .main-img-card img { max-width: 100%; max-height: 100%; object-fit: contain; position: relative; z-index: 2; transition: transform 0.4s ease; }
+        .main-img-card:hover img { transform: scale(1.04); }
+
+        .soft-angle-img {
+            border-radius: 18px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.65), 0 0 15px rgba(255, 255, 255, 0.05);
+        }
+
+        .zoom-hint { position: absolute; bottom: 5px; font-size: 0.75rem; color: var(--text-sub); background: rgba(11, 15, 25, 0.8); padding: 4px 12px; border-radius: 12px; pointer-events: none; border: 1px solid var(--border-color); z-index: 3; }
+        .thumbnails-box { display: flex; gap: 0.8rem; z-index: 3; }
+        .thumb { width: 65px; height: 65px; border-radius: 12px; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); padding: 5px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .thumb img { width: 100%; height: 100%; object-fit: contain; border-radius: 8px; }
+        .thumb.active-thumb { border-color: var(--current-color, #fff); }
+
+        /* Modal Base */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(4, 7, 12, 0.88); backdrop-filter: blur(10px); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-card { background: #0f1623; border: 1px solid var(--border-color); padding: 2.2rem; border-radius: 20px; width: 90%; max-width: 450px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); position: relative; }
+        .close-modal { position: absolute; top: 15px; left: 20px; font-size: 1.4rem; cursor: pointer; color: var(--text-sub); transition: color 0.2s; }
+        .close-modal:hover { color: #fff; }
+        .modal-card h3 { margin-bottom: 0.5rem; font-size: 1.4rem; color: #fff; }
+        .modal-card p { font-size: 0.85rem; color: var(--text-sub); margin-bottom: 1.5rem; }
+
+        /* Form Styling & Validation UX */
+        .form-group { margin-bottom: 1.2rem; text-align: right; }
+        .form-group label { display: block; font-size: 0.85rem; color: var(--text-sub); margin-bottom: 0.4rem; }
+        .form-group input { width: 100%; padding: 0.8rem 1rem; border-radius: 10px; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.03); color: #fff; outline: none; font-size: 0.95rem; transition: border-color 0.3s, box-shadow 0.3s; }
+        .form-group input:focus { border-color: var(--current-color, #00d2ff); }
+        
+        .error-msg { display: block; color: #ff4757; font-size: 0.75rem; margin-top: 4px; min-height: 16px; text-align: right; }
+        .form-group input.invalid-input { border-color: #ff4757 !important; box-shadow: 0 0 8px rgba(255, 71, 87, 0.3); }
+        .form-group input.valid-input { border-color: var(--accent-emerald) !important; }
+
+        .btn-action { width: 100%; padding: 0.9rem; border-radius: 25px; border: none; font-weight: bold; font-size: 1rem; cursor: pointer; color: #000; background: var(--current-color, #00d2ff); margin-top: 0.8rem; transition: transform 0.2s, opacity 0.2s; }
+        .btn-action:hover { transform: scale(1.02); }
+        .btn-action:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .cart-item-card { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem; }
+        .cart-item-img { width: 60px; height: 60px; object-fit: contain; border-radius: 8px; }
+        .cart-item-details { flex: 1; text-align: right; }
+        .cart-item-title { font-size: 0.9rem; font-weight: bold; color: #fff; }
+        .cart-item-price { font-size: 0.85rem; color: var(--text-sub); }
+
+        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; margin-top: 5px; }
+        .status-pending { background: rgba(241, 196, 15, 0.15); color: #f1c40f; border: 1px solid #f1c40f; }
+        .status-delivered { background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid #2ecc71; }
+
+        .lightbox-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(5, 8, 15, 0.95); z-index: 3000; justify-content: center; align-items: center; cursor: zoom-out; }
+        .lightbox-modal img { max-width: 85%; max-height: 85%; object-fit: contain; }
+
+        @media (max-width: 850px) {
+            #home-view { flex-direction: column; height: auto; min-height: 100vh; overflow-y: auto; }
+            .split-side { min-height: 100vh; padding: 40px 20px; }
+            #product-view { flex-direction: column-reverse; padding-top: 100px; text-align: center; }
+            .specs-grid { grid-template-columns: 1fr; }
+        }
+
+        @media screen and (max-width: 768px) {
+            html, body {
+                overflow-y: auto !important;
+                height: auto !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo" onclick="goHome()"><span class="part-endro">Endro</span><span class="part-caffain">caffeine</span></div>
+        <button class="cart-btn-nav" onclick="openCartModal()">
+            <span>🛒 طلباتي</span>
+            <span class="cart-badge" id="cartCount">0</span>
+        </button>
+    </nav>
+
+    <main id="home-view">
+        <div class="split-side green-side" onclick="openProduct('green')">
+            <img src="green-main.png" alt="Casio MTP-VD01D Emerald Green">
+            <h2>Casio MTP-VD01D</h2>
+            <div class="color-subtitle">Emerald Green</div>
+            <p>مستوحاة من أصل الطبيعة والصلابة الكلاسيكية.</p>
+            <button class="btn-discover">استكشف التفاصيل والمواصفات</button>
+        </div>
+
+        <div class="split-side blue-side" onclick="openProduct('blue')">
+            <img src="blue-main.png" alt="Casio MTP-VD01D Ocean Blue">
+            <h2>Casio MTP-VD01D</h2>
+            <div class="color-subtitle">Ocean Blue</div>
+            <p>مستوحاة من عمق البحار والحرية اللانهائية.</p>
+            <button class="btn-discover">استكشف التفاصيل والمواصفات</button>
+        </div>
+    </main>
+
+    <main id="product-view">
+        <div class="product-details">
+            <button class="btn-back" onclick="goHome()">&#8594; العودة للمجموعات</button>
+            <div class="product-brand">Casio Original Collection</div>
+            <h1 class="product-title" id="pTitle">اسم الساعة</h1>
+            <p class="product-desc" id="pDesc">وصف الساعة هنا.</p>
+
+            <div class="specs-grid">
+                <div class="spec-card"><span class="spec-icon">💧</span><div class="spec-info"><h4>مقاومة الماء</h4><p>50 متر / 5 Bar</p></div></div>
+                <div class="spec-card"><span class="spec-icon">🛡️</span><div class="spec-info"><h4>نوع الزجاج</h4><p>زجاج معدني مقاوم للخدش</p></div></div>
+                <div class="spec-card"><span class="spec-icon">⚙️</span><div class="spec-info"><h4>نوع الحركة</h4><p>كوارتز ياباني دقيق</p></div></div>
+                <div class="spec-card"><span class="spec-icon">🔗</span><div class="spec-info"><h4>مادة الهيكل</h4><p>ستانلس ستيل 316L</p></div></div>
+            </div>
+
+            <div class="product-price">2,300 د.ج</div>
+            <button class="btn-buy-now" id="pBuyBtn" onclick="openCheckout()">اطلبها الآن 🛒</button>
+        </div>
+
+        <div class="gallery-container">
+            <div class="main-img-card" onclick="openLightbox()">
+                <div class="glow-effect" id="glowEffect"></div>
+                <img src="" id="mainProductImg" alt="صورة الساعة">
+                <div class="zoom-hint">🔍 انقر للتكبير بملء الشاشة</div>
+            </div>
+            <div class="thumbnails-box" id="thumbsContainer"></div>
+        </div>
+    </main>
+
+    <!-- Checkout Modal with Integrated HTML5 & JS Validation -->
+    <div class="modal-overlay" id="checkoutModal" onclick="closeModalOnOutsideClick(event, 'checkoutModal')">
+        <div class="modal-card">
+            <span class="close-modal" onclick="closeCheckout()">&times;</span>
+            <h3>إتمام طلب الشراء 📦</h3>
+            <p>الدفع عند الاستلام بعد معاينة المنتج.</p>
+
+            <form id="orderForm" onsubmit="handleOrderSubmit(event)" novalidate>
+                <div class="form-group">
+                    <label for="custName">الاسم واللقب</label>
+                    <input 
+                        type="text" 
+                        id="custName" 
+                        placeholder="مثال: محمد علي" 
+                        required 
+                        minlength="3" 
+                        maxlength="50"
+                        pattern="^[a-zA-Z\u0600-\u06FF\s]+$"
+                        autocomplete="name"
+                        oninvalid="this.setCustomValidity('يرجى إدخال اسم صحيح يترواح بين 3 و50 حرفاً بدون أرقام')"
+                        oninput="this.setCustomValidity('')"
+                    >
+                    <span class="error-msg" id="nameError"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="custPhone">رقم الهاتف (10 أرقام)</label>
+                    <input 
+                        type="tel" 
+                        id="custPhone" 
+                        placeholder="مثال: 0661234567" 
+                        required 
+                        maxlength="10"
+                        pattern="^(05|06|07)[0-9]{8}$"
+                        inputmode="numeric"
+                        autocomplete="tel"
+                        oninvalid="this.setCustomValidity('يرجى إدخال رقم هاتف جزائري يتكون من 10 أرقام ويبدأ بـ 05، 06، أو 07')"
+                        oninput="this.setCustomValidity(''); this.value = this.value.replace(/[^0-9]/g, '');"
+                    >
+                    <span class="error-msg" id="phoneError"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="custState">الولاية والبلدية</label>
+                    <input 
+                        type="text" 
+                        id="custState" 
+                        placeholder="مثال: الجزائر العاصمة - باب الزوار" 
+                        required 
+                        minlength="5" 
+                        maxlength="100"
+                        autocomplete="street-address"
+                        oninvalid="this.setCustomValidity('يرجى كتابة العنوان بالكامل (5 حروف على الأقل)')"
+                        oninput="this.setCustomValidity('')"
+                    >
+                    <span class="error-msg" id="stateError"></span>
+                </div>
+
+                <button type="submit" class="btn-action" id="pConfirmBtn">تأكيد الطلب الآن</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cart Modal -->
+    <div class="modal-overlay" id="cartModal" onclick="closeModalOnOutsideClick(event, 'cartModal')">
+        <div class="modal-card" style="max-width: 500px;">
+            <span class="close-modal" onclick="closeCartModal()">&times;</span>
+            <h3>سلة طلباتي 🛍️</h3>
+            <p>تتبع حالة طلباتك مباشرة.</p>
+            <div id="cartItemsContainer"></div>
+            <button class="btn-action" style="background: rgba(255,255,255,0.1); color: #fff;" onclick="closeCartModal()">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div class="lightbox-modal" id="lightbox" onclick="closeLightbox()">
+        <img src="" id="lightboxImg" alt="صورة مكبرة">
+    </div>
+
+    <script>
+        // إعدادات Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyB9ojhhtb2EEhMLItBMhSZu1ZsTp5s1yAk",
+            authDomain: "endrocaffeine-db.firebaseapp.com",
+            databaseURL: "https://endrocaffeine-db-default-rtdb.firebaseio.com",
+            projectId: "endrocaffeine-db",
+            storageBucket: "endrocaffeine-db.firebasestorage.app",
+            messagingSenderId: "374846308318",
+            appId: "1:374846308318:web:43a85a7f0a49b928c5674f"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentProductKey = "";
+
+        const products = {
+            green: { title: "Casio MTP-VD01D Emerald Green", desc: "ساعة كاسيو الأصلية بمينا زمردي فاخر.", color: "#2ecc71", bgThemeColor: "#08120b", glowColor: "rgba(46, 204, 113, 0.35)", images: ["green-main.png", "green-angle1.png", "green-angle2.png"] },
+            blue: { title: "Casio MTP-VD01D Ocean Blue", desc: "ساعة كاسيو الأصلية بتصميم يعكس زرقة أعماق المحيط.", color: "#00d2ff", bgThemeColor: "#070e17", glowColor: "rgba(0, 210, 255, 0.35)", images: ["blue-main.png", "blue-angle1.png", "blue-angle2.png"] }
+        };
+
+        const homeView = document.getElementById('home-view');
+        const productView = document.getElementById('product-view');
+        const mainImg = document.getElementById('mainProductImg');
+        const glowEffect = document.getElementById('glowEffect');
+        const thumbsContainer = document.getElementById('thumbsContainer');
+        const pTitle = document.getElementById('pTitle');
+        const pDesc = document.getElementById('pDesc');
+        const pBuyBtn = document.getElementById('pBuyBtn');
+        const pConfirmBtn = document.getElementById('pConfirmBtn');
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightboxImg');
+        const checkoutModal = document.getElementById('checkoutModal');
+        const cartModal = document.getElementById('cartModal');
+
+        function isAngleImage(src) {
+            return src.includes('angle1') || src.includes('angle2');
+        }
+
+        function applySoftAngleClass(imgElement, src) {
+            if (isAngleImage(src)) {
+                imgElement.classList.add('soft-angle-img');
+            } else {
+                imgElement.classList.remove('soft-angle-img');
+            }
+        }
+
+        function openProduct(type) {
+            currentProductKey = type;
+            const data = products[type];
+            pTitle.textContent = data.title;
+            pDesc.textContent = data.desc;
+            pBuyBtn.style.backgroundColor = data.color;
+            pConfirmBtn.style.backgroundColor = data.color;
+            glowEffect.style.background = data.glowColor;
+            document.documentElement.style.setProperty('--current-color', data.color);
+            document.body.style.backgroundColor = data.bgThemeColor;
+
+            mainImg.src = data.images[0];
+            lightboxImg.src = data.images[0];
+            applySoftAngleClass(mainImg, data.images[0]);
+            applySoftAngleClass(lightboxImg, data.images[0]);
+
+            thumbsContainer.innerHTML = '';
+            data.images.forEach((imgSrc, index) => {
+                const thumbDiv = document.createElement('div');
+                thumbDiv.className = `thumb ${index === 0 ? 'active-thumb' : ''}`;
+                
+                const thumbImg = document.createElement('img');
+                thumbImg.src = imgSrc;
+                applySoftAngleClass(thumbImg, imgSrc);
+                
+                thumbDiv.appendChild(thumbImg);
+                thumbDiv.onclick = function() {
+                    document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active-thumb'));
+                    thumbDiv.classList.add('active-thumb');
+                    mainImg.src = imgSrc; 
+                    lightboxImg.src = imgSrc;
+                    applySoftAngleClass(mainImg, imgSrc);
+                    applySoftAngleClass(lightboxImg, imgSrc);
+                };
+                thumbsContainer.appendChild(thumbDiv);
+            });
+
+            homeView.style.display = 'none';
+            productView.style.display = 'flex';
+            setTimeout(() => { productView.style.opacity = '1'; }, 30);
+        }
+
+        function goHome() {
+            productView.style.opacity = '0';
+            setTimeout(() => { 
+                productView.style.display = 'none'; 
+                homeView.style.display = 'flex'; 
+                document.body.style.backgroundColor = '#090e17'; 
+            }, 300);
+        }
+
+        function openLightbox() { lightbox.style.display = 'flex'; }
+        function closeLightbox() { lightbox.style.display = 'none'; }
+        function openCheckout() { checkoutModal.style.display = 'flex'; }
+        function closeCheckout() { checkoutModal.style.display = 'none'; }
+        function openCartModal() { cartModal.style.display = 'flex'; }
+        function closeCartModal() { cartModal.style.display = 'none'; }
+
+        function closeModalOnOutsideClick(event, modalId) {
+            if (event.target.id === modalId) {
+                document.getElementById(modalId).style.display = 'none';
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeLightbox();
+                closeCheckout();
+                closeCartModal();
+            }
+        });
+
+        function validateInputs() {
+            const nameInput = document.getElementById('custName');
+            const phoneInput = document.getElementById('custPhone');
+            const stateInput = document.getElementById('custState');
+
+            const nameError = document.getElementById('nameError');
+            const phoneError = document.getElementById('phoneError');
+            const stateError = document.getElementById('stateError');
+
+            let isValid = true;
+
+            [nameError, phoneError, stateError].forEach(e => e.textContent = '');
+            [nameInput, phoneInput, stateInput].forEach(i => i.classList.remove('invalid-input', 'valid-input'));
+
+            const nameRegex = /^[a-zA-Z\u0600-\u06FF\s]+$/;
+            if (!nameInput.value.trim()) {
+                nameError.textContent = 'يرجى إدخال الاسم واللقب.';
+                nameInput.classList.add('invalid-input');
+                isValid = false;
+            } else if (nameInput.value.trim().length < 3) {
+                nameError.textContent = 'الاسم قصير جداً (أدخل 3 حروف على الأقل).';
+                nameInput.classList.add('invalid-input');
+                isValid = false;
+            } else if (!nameRegex.test(nameInput.value.trim())) {
+                nameError.textContent = 'الاسم يجب أن يحتوي على حروف فقط بدون أرقام أو رموز.';
+                nameInput.classList.add('invalid-input');
+                isValid = false;
+            } else {
+                nameInput.classList.add('valid-input');
+            }
+
+            const phoneRegex = /^(05|06|07)[0-9]{8}$/;
+            if (!phoneInput.value.trim()) {
+                phoneError.textContent = 'يرجى إدخال رقم الهاتف.';
+                phoneInput.classList.add('invalid-input');
+                isValid = false;
+            } else if (!phoneRegex.test(phoneInput.value.trim())) {
+                phoneError.textContent = 'يرجى إدخال رقم هاتف جزائري صحيح يتكون من 10 أرقام يبدأ بـ 05، 06، أو 07.';
+                phoneInput.classList.add('invalid-input');
+                isValid = false;
+            } else {
+                phoneInput.classList.add('valid-input');
+            }
+
+            if (!stateInput.value.trim()) {
+                stateError.textContent = 'يرجى إدخال الولاية والبلدية.';
+                stateInput.classList.add('invalid-input');
+                isValid = false;
+            } else if (stateInput.value.trim().length < 5) {
+                stateError.textContent = 'يرجى كتابة العنوان بشكل واضح ومفصل.';
+                stateInput.classList.add('invalid-input');
+                isValid = false;
+            } else {
+                stateInput.classList.add('valid-input');
+            }
+
+            if (!isValid) {
+                const firstInvalid = document.querySelector('.invalid-input');
+                if (firstInvalid) firstInvalid.focus();
+            }
+
+            return isValid;
+        }
+
+        function handleOrderSubmit(e) {
+            e.preventDefault();
+
+            if (!validateInputs()) {
+                return;
+            }
+
+            const name = document.getElementById('custName').value.trim();
+            const phone = document.getElementById('custPhone').value.trim();
+            const state = document.getElementById('custState').value.trim();
+            const prodData = products[currentProductKey];
+            const submitBtn = document.getElementById('pConfirmBtn');
+            
+            submitBtn.textContent = 'جاري تسجيل طلبك... ⏳';
+            submitBtn.disabled = true;
+
+            const newOrderRef = db.ref('orders').push();
+            const orderId = newOrderRef.key;
+
+            const orderData = {
+                id: orderId,
+                title: prodData.title,
+                img: prodData.images[0],
+                name: name,
+                phone: phone,
+                state: state,
+                price: "2,300 د.ج",
+                status: "pending",
+                timestamp: Date.now()
+            };
+
+            newOrderRef.set(orderData).then(() => {
+                let myOrders = JSON.parse(localStorage.getItem('my_orders') || '[]');
+                myOrders.push(orderId);
+                localStorage.setItem('my_orders', JSON.stringify(myOrders));
+
+                const orderPayload = {
+                    orderId: orderId,
+                    title: prodData.title,
+                    price: "2,300 د.ج",
+                    name: name,
+                    phone: phone,
+                    state: state
+                };
+
+                fetch('/.netlify/functions/sendOrder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderPayload)
+                }).catch(err => console.error("خطأ في الخادم المخفي:", err));
+
+                document.getElementById('orderForm').reset();
+                closeCheckout();
+                openCartModal();
+            }).catch(err => alert("حدث خطأ أثناء حفظ الطلب. يرجى إعادة المحاولة."))
+            .finally(() => { 
+                submitBtn.textContent = 'تأكيد الطلب الآن'; 
+                submitBtn.disabled = false; 
+            });
+        }
+
+        function listenToMyOrders() {
+            const myOrderIds = JSON.parse(localStorage.getItem('my_orders') || '[]');
+            const container = document.getElementById('cartItemsContainer');
+            document.getElementById('cartCount').textContent = myOrderIds.length;
+
+            if (myOrderIds.length === 0) {
+                container.innerHTML = `<p style="text-align: center; color: var(--text-sub); padding: 2rem 0;">لا توجد طلبات سابقة.</p>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            myOrderIds.forEach(orderId => {
+                db.ref(`orders/${orderId}`).on('value', (snapshot) => {
+                    const order = snapshot.val();
+                    if (!order) return;
+
+                    let existingCard = document.getElementById(`order-card-${orderId}`);
+                    const isPending = order.status === 'pending';
+                    
+                    const cardHTML = `
+                        <img src="${order.img}" class="cart-item-img ${isAngleImage(order.img) ? 'soft-angle-img' : ''}">
+                        <div class="cart-item-details">
+                            <div class="cart-item-title">${order.title}</div>
+                            <div class="cart-item-price">${order.price}</div>
+                            <span class="status-badge ${isPending ? 'status-pending' : 'status-delivered'}">
+                                ${isPending ? '⏳ الطلب قيد التحضير والاستلام' : '✅ تم استلام الطلب بنجاح'}
+                            </span>
+                        </div>
+                    `;
+
+                    if (existingCard) {
+                        existingCard.innerHTML = cardHTML;
+                    } else {
+                        const cardDiv = document.createElement('div');
+                        cardDiv.className = 'cart-item-card';
+                        cardDiv.id = `order-card-${orderId}`;
+                        cardDiv.innerHTML = cardHTML;
+                        container.appendChild(cardDiv);
+                    }
+                });
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', listenToMyOrders);
+    </script>
+</body>
+</html>
