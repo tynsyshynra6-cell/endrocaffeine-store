@@ -315,6 +315,17 @@
         const checkoutModal = document.getElementById('checkoutModal');
         const cartModal = document.getElementById('cartModal');
 
+        // تهريب أي أحرف HTML خطيرة قبل عرض بيانات قادمة من قاعدة البيانات
+        function escapeHTML(str) {
+            if (str === undefined || str === null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function isAngleImage(src) {
             return src.includes('angle1') || src.includes('angle2');
         }
@@ -543,11 +554,12 @@
                     let existingCard = document.getElementById(`order-card-${orderId}`);
                     const isPending = order.status === 'pending';
                     
+                    const safeImg = escapeHTML(order.img);
                     const cardHTML = `
-                        <img src="${order.img}" class="cart-item-img ${isAngleImage(order.img) ? 'soft-angle-img' : ''}">
+                        <img src="${safeImg}" class="cart-item-img ${isAngleImage(order.img) ? 'soft-angle-img' : ''}">
                         <div class="cart-item-details">
-                            <div class="cart-item-title">${order.title}</div>
-                            <div class="cart-item-price">${order.price}</div>
+                            <div class="cart-item-title">${escapeHTML(order.title)}</div>
+                            <div class="cart-item-price">${escapeHTML(order.price)}</div>
                             <span class="status-badge ${isPending ? 'status-pending' : 'status-delivered'}">
                                 ${isPending ? '⏳ الطلب قيد التحضير والاستلام' : '✅ تم استلام الطلب بنجاح'}
                             </span>
