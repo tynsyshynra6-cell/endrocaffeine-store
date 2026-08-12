@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم Endrocaffeine 🛠️</title>
+    
+    <!-- Firebase App and Database SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #090e17; color: #fff; font-family: system-ui, -apple-system, sans-serif; padding: 20px; text-align: right; }
+        h1 { margin-bottom: 20px; color: #00d2ff; font-size: 1.8rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        .orders-container { display: flex; flex-direction: column; gap: 15px; }
+        .order-card { background: #131b2a; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .info { line-height: 1.6; }
+        .info h3 { color: #00d2ff; margin-bottom: 5px; }
+        .info strong { color: #2ecc71; }
+        .actions-box { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .btn-status { padding: 10px 18px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
+        .btn-deliver { background: #2ecc71; color: #000; }
+        .btn-pending { background: #f1c40f; color: #000; }
+        .btn-delete { background: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid #e74c3c; }
+        .btn-delete:hover { background: #e74c3c; color: #fff; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 10px; font-size: 0.85rem; margin-top: 8px; font-weight: bold; }
+        .empty-msg { text-align: center; color: #888; font-size: 1.1rem; padding: 40px 0; }
+
+        /* شاشة تسجيل الدخول */
+        #loginScreen { min-height: 90vh; display: flex; align-items: center; justify-content: center; }
+        .login-card { background: #131b2a; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 2rem; width: 100%; max-width: 340px; text-align: center; }
+        .login-card h2 { color: #00d2ff; margin-bottom: 0.3rem; }
+        .login-card p { color: #8b9bb0; font-size: 0.85rem; margin-bottom: 1.3rem; }
+        .login-card input { width: 100%; padding: 0.75rem 1rem; margin-bottom: 0.8rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); color: #fff; outline: none; font-size: 0.95rem; }
+        .login-card input:focus { border-color: #00d2ff; }
+        .login-card button { width: 100%; padding: 0.8rem; border: none; border-radius: 20px; background: #00d2ff; color: #000; font-weight: bold; cursor: pointer; }
+        .login-err { color: #e74c3c; font-size: 0.8rem; margin-top: 0.7rem; min-height: 16px; }
+        #logoutBtn { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 14px; border-radius: 16px; font-size: 0.8rem; cursor: pointer; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+
+    <div id="loginScreen">
+        <div class="login-card">
+            <h2>لوحة التحكم 🔐</h2>
+            <p>سجّل الدخول لإدارة الطلبات</p>
+            <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" autocomplete="username">
+            <input type="password" id="loginPassword" placeholder="كلمة المرور" autocomplete="current-password">
+            <button onclick="doLogin()">تسجيل الدخول</button>
+            <div class="login-err" id="loginErr"></div>
+        </div>
+    </div>
+
+    <div id="dashboard" style="display:none;">
+        <div class="top-bar">
+            <h1>لوحة إدارة الطلبات 📦</h1>
+            <button id="logoutBtn" onclick="firebase.auth().signOut()">تسجيل الخروج</button>
+        </div>
+        <div id="ordersList" class="orders-container">جاري تحميل الطلبات...</div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyB9ojhhtb2EEhMLItBMhSZu1ZsTp5s1yAk",
+            authDomain: "endrocaffeine-db.firebaseapp.com",
+            databaseURL: "https://endrocaffeine-db-default-rtdb.firebaseio.com",
+            projectId: "endrocaffeine-db",
+            storageBucket: "endrocaffeine-db.firebasestorage.app",
+            messagingSenderId: "374846308318",
+            appId: "1:374846308318:web:43a85a7f0a49b928c5674f"
+        };
+        
+        // تهيئة Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        function doLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errBox = document.getElementById('loginErr');
+            errBox.textContent = '';
+            if (!email || !password) {
+                errBox.textContent = 'يرجى إدخال البريد وكلمة المرور.';
+                return;
+            }
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(err => { errBox.textContent = 'بيانات الدخول غير صحيحة.'; console.error(err); });
+        }
+
+        let ordersListenerStarted = false;
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                if (!ordersListenerStarted) {
+                    ordersListenerStarted = true;
+                    startOrdersListener();
+                }
+            } else {
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('dashboard').style.display = 'none';
+            }
+        });
+
+        // تهريب أي أحرف HTML خطيرة قبل عرض بيانات قادمة من قاعدة البيانات
+        function escapeHTML(str) {
+            if (str === undefined || str === null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // جلب جميع الطلبات وتحديثها لحظياً (لا تبدأ إلا بعد تسجيل الدخول)
+        function startOrdersListener() {
+        db.ref('orders').on('value', (snapshot) => {
+            const list = document.getElementById('ordersList');
+            const data = snapshot.val();
+            
+            if (!data) {
+                list.innerHTML = "<p class='empty-msg'>لا توجد طلبات حتى الآن 📭</p>";
+                return;
+            }
+
+            list.innerHTML = '';
+            Object.keys(data).reverse().forEach(key => {
+                const order = data[key];
+                const isDelivered = order.status === 'delivered';
+                
+                const card = document.createElement('div');
+                card.className = 'order-card';
+                card.innerHTML = `
+                    <div class="info">
+                        <h3>${escapeHTML(order.title) || 'ساعة Endrocaffeine'}</h3>
+                        <p>👤 <strong>الزبون:</strong> ${escapeHTML(order.name) || 'غير محدد'} (${escapeHTML(order.phone) || 'بدون رقم'})</p>
+                        <p>📍 <strong>العنوان/الولاية:</strong> ${escapeHTML(order.state) || 'غير محدد'}</p>
+                        <p>💰 <strong>السعر:</strong> ${escapeHTML(order.price) || 'غير محدد'}</p>
+                        <span class="badge" style="background: ${isDelivered ? 'rgba(46,204,113,0.2)' : 'rgba(241,196,15,0.2)'}; color: ${isDelivered ? '#2ecc71' : '#f1c40f'}">
+                            الحالة الحالية: ${isDelivered ? '✅ تم الاستلام' : '⏳ قيد الاستلام'}
+                        </span>
+                    </div>
+                    <div class="actions-box">
+                        <button class="btn-status ${isDelivered ? 'btn-pending' : 'btn-deliver'}" onclick="toggleStatus('${key}', '${order.status}')">
+                            ${isDelivered ? 'إرجاع إلى قيد الاستلام ⏳' : 'تغيير إلى تم الاستلام ✅'}
+                        </button>
+                        <button class="btn-status btn-delete" onclick="deleteOrder('${key}')">
+                            حذف الطلب 🗑️
+                        </button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }, (error) => {
+            console.error("Firebase error:", error);
+            document.getElementById('ordersList').innerHTML = "<p class='empty-msg' style='color:#e74c3c;'>حدث خطأ أثناء اتصال قاعدة البيانات. تأكد من إعدادات قواعد البيانات في Firebase.</p>";
+        });
+        }
+
+        // دالة تغيير حالة الطلب
+        function toggleStatus(orderId, currentStatus) {
+            const newStatus = currentStatus === 'pending' ? 'delivered' : 'pending';
+            db.ref(`orders/${orderId}`).update({ status: newStatus });
+        }
+
+        // دالة حذف الطلب من Firebase
+        function deleteOrder(orderId) {
+            if (confirm("هل أنت تأكد من أنك تريد حذف هذا الطلب نهائياً؟")) {
+                db.ref(`orders/${orderId}`).remove();
+            }
+        }
+    </script>
+</body>
+</html>
